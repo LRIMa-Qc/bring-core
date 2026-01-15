@@ -24,7 +24,6 @@ class VoiceAssistant(threading.Thread):
     def __init__(self, access_key: str, serial_bridge: SerialBridge):
         super().__init__(daemon=True)
         self.serial = serial_bridge
-        self.serial.connect()
 
         keyword_path = os.path.abspath("bring.ppn")
         if not os.path.exists(keyword_path):
