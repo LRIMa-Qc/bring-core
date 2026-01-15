@@ -25,7 +25,8 @@ class SerialBridge:
                 time.sleep(1)
                 log.info("Connected serial port=%s baud=%d", port, self.baudrate)
                 return
-            except Exception:
+            except Exception as e:
+                log.error(f"An error occured when trying to connect to serial port: {e}")
                 continue
 
         log.warning("No serial device found")
