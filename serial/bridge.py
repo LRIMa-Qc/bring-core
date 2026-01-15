@@ -18,6 +18,7 @@ class SerialBridge:
             return
 
         for port in sorted(glob.glob("/dev/ttyACM*")):
+            log.info(f"Found serial {port}")
             try:
                 self.ser = serial.Serial(port, self.baudrate, timeout=1)
                 self.port = port
