@@ -13,7 +13,7 @@ import sounddevice as sd
 import soundfile as sf
 import requests
 
-from harware_serial.bridge import SerialBridge  # reuse SerialBridge
+from hardware_serial.bridge import SerialBridge  # reuse SerialBridge
 
 log = logging.getLogger("voice_assistant")
 
