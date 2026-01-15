@@ -152,7 +152,7 @@ class VoiceAssistant(threading.Thread):
         log.info("Processing audio via AI...")
 
         stop_music = threading.Event()
-
+        #
         def waiting_music_loop():
             musics = [
                 os.path.join("waiting_musics", f)
@@ -161,11 +161,19 @@ class VoiceAssistant(threading.Thread):
             ]
             if not musics:
                 return
+
             while not stop_music.is_set():
                 music_file = random.choice(musics)
-                data, fs = sf.read(music_file)
-                sd.play(data, fs)
-                sd.wait()
+                try:
+                    data, fs = sf.read(music_file, dtype="float32")
+                    with audio_lock:
+                        sd.play(data, fs)
+                    while sd.get_stream().active and not stop_music.is_set():
+                        sd.sleep(100)
+                    sd.stop()
+                except Exception as e:
+                    log.warning("Waiting music error: %s", e)
+
         music_thread = threading.Thread(target=waiting_music_loop, daemon=True)
         music_thread.start()
 
