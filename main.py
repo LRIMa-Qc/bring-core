@@ -3,6 +3,7 @@ import logging
 from typing import Set
 
 from config import BAUDRATE, METRICS_PORT, ACCESS_KEY
+from audio.voice_assistant import VoiceAssistant
 from logging_setup import setup_logging
 from serial.bridge import SerialBridge
 from mqtt.bridge import MQTTBridge
