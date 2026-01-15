@@ -20,6 +20,7 @@ log = logging.getLogger("voice_assistant")
 
 class VoiceAssistant(threading.Thread):
     """Voice Assistant system running in its own thread"""
+    audio_lock = threading.Lock()
 
     def __init__(self, access_key: str, serial_bridge: SerialBridge):
         super().__init__(daemon=True)
