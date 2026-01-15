@@ -37,7 +37,18 @@ class SerialBridge:
         except Exception as e:
             log.error("Serial write failed: %s", e)
             self._drop()
-
+    def write_rgb(self, r: int, g: int, b: int):
+        """
+        Send RGB LED command.
+        Protocol: [0x0A, R, G, B]
+        """
+        if not self.ser or not self.ser.is_open:
+            return
+        try:
+            self.ser.write(bytes([0x0A, r & 0xFF, g & 0xFF, b & 0xFF]))
+        except Exception as e:
+            log.error("RGB write failed: %s", e)
+            self._drop()
     def read_packet(self):
         if not self.ser or self.ser.in_waiting < 2:
             return None
