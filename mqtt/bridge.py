@@ -43,7 +43,8 @@ class MQTTBridge:
     def publish(self, topic: str, payload: str):
         try:
             self.client.publish(topic, payload)
-        except Exception:
+        except Exception as e:
+            log.error("MQTT publishing handling failed: %s", e)
 
     def close(self):
         try:
