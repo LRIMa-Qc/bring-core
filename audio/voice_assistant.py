@@ -16,7 +16,7 @@ import requests
 from hardware_serial.bridge import SerialBridge  # reuse SerialBridge
 
 log = logging.getLogger("voice_assistant")
-
+audio_lock = threading.Lock()
 
 class VoiceAssistant(threading.Thread):
     """Voice Assistant system running in its own thread"""
