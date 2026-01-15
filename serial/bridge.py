@@ -4,7 +4,6 @@ import logging
 from typing import Optional
 
 import serial
-from metrics.metrics import serial_packets_read, serial_write_errors, connected_serial_devices
 
 log = logging.getLogger("serial")
 
@@ -24,13 +23,11 @@ class SerialBridge:
                 self.port = port
                 time.sleep(1)
                 log.info("Connected serial port=%s baud=%d", port, self.baudrate)
-                connected_serial_devices.set(1)
                 return
             except Exception:
                 continue
 
         log.warning("No serial device found")
-        connected_serial_devices.set(0)
 
     def write_hex(self, hex_data: str):
         if not self.ser:
@@ -38,7 +35,6 @@ class SerialBridge:
         try:
             self.ser.write(bytes.fromhex(hex_data))
         except Exception as e:
-            serial_write_errors.inc()
             log.error("Serial write failed: %s", e)
             self._drop()
 
@@ -52,7 +48,6 @@ class SerialBridge:
             if payload_len < 0:
                 return None
             payload = self.ser.read(payload_len)
-            serial_packets_read.inc()
             return dtype, payload
         except Exception as e:
             log.error("Serial read failed: %s", e)
@@ -66,7 +61,6 @@ class SerialBridge:
         finally:
             self.ser = None
             self.port = None
-            connected_serial_devices.set(0)
 
     def close(self):
         self._drop()

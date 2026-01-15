@@ -2,9 +2,8 @@ import time
 import logging
 from typing import Set
 
-from config import BAUDRATE, METRICS_PORT
+from config import BAUDRATE, METRICS_PORT, ACCESS_KEY
 from logging_setup import setup_logging
-from metrics.metrics import start_metrics_server
 from serial.bridge import SerialBridge
 from mqtt.bridge import MQTTBridge
 from camera.streamer import CameraStreamer
@@ -14,7 +13,6 @@ log = logging.getLogger("main")
 
 def main():
     setup_logging()
-    start_metrics_server(port=METRICS_PORT)
 
     serial_bridge = SerialBridge(BAUDRATE)
     mqtt_bridge = MQTTBridge(serial_bridge)
@@ -22,6 +20,9 @@ def main():
 
     camera = CameraStreamer()
     camera.start()
+
+    voice_assistant = VoiceAssistant(ACCESS_KEY, serial_bridge)
+    voice_assistant.start()
 
     verbose_devices: Set[int] = set()
     RuntimeLogger(verbose_devices).start()
@@ -50,6 +51,7 @@ def main():
         camera.stop()
         mqtt_bridge.close()
         serial_bridge.close()
+        voice_assistant.stop()
         log.info("Shutdown complete")
 
 if __name__ == "__main__":

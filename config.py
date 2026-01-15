@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Serial
 BAUDRATE = int(os.getenv("BAUDRATE", 9600))
@@ -19,3 +21,7 @@ CAMERA_FPS = int(os.getenv("CAMERA_FPS", 10))
 
 # Metrics
 METRICS_PORT = int(os.getenv("METRICS_PORT", 8000))
+ACCESS_KEY = os.getenv("ACCESS_KEY")
+if not ACCESS_KEY:
+    raise ValueError("ACCESS_KEY missing in .env")
+

@@ -4,8 +4,6 @@ import logging
 import cv2
 import requests
 from config import CAMERA_INDEX, CAMERA_WIDTH, CAMERA_HEIGHT, CAMERA_FPS, CAMERA_URL
-from metrics.metrics import camera_frames_sent
-
 log = logging.getLogger("camera")
 
 class CameraStreamer(threading.Thread):
@@ -38,7 +36,6 @@ class CameraStreamer(threading.Thread):
                         headers={"Content-Type": "image/jpeg"},
                         timeout=0.2,
                     )
-                    camera_frames_sent.inc()
                 except Exception:
                     pass
             time.sleep(max(0, interval - (time.time() - start)))

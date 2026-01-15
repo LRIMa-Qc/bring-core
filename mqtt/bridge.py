@@ -1,7 +1,6 @@
 import logging
 import paho.mqtt.client as mqtt
 from config import MQTT_BROKER, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_SUB_TOPIC
-from metrics.metrics import mqtt_messages_published, mqtt_messages_failed
 
 log = logging.getLogger("mqtt")
 
@@ -44,9 +43,7 @@ class MQTTBridge:
     def publish(self, topic: str, payload: str):
         try:
             self.client.publish(topic, payload)
-            mqtt_messages_published.inc()
         except Exception:
-            mqtt_messages_failed.inc()
 
     def close(self):
         try:
@@ -54,3 +51,4 @@ class MQTTBridge:
             self.client.disconnect()
         except Exception:
             pass
+
