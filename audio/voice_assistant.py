@@ -13,7 +13,7 @@ import sounddevice as sd
 import soundfile as sf
 import requests
 
-from hardware_serial.bridge import SerialBridge  # reuse SerialBridge
+from hardware_serial.bridge import SerialBridge
 
 log = logging.getLogger("voice_assistant")
 audio_lock = threading.Lock()
@@ -46,7 +46,6 @@ class VoiceAssistant(threading.Thread):
         self.set_idle()
         self.running = True
 
-    # ---------------- LED STATES ---------------- #
     def set_idle(self):
         self.serial.write_rgb(0, 100, 0)
 
@@ -59,7 +58,6 @@ class VoiceAssistant(threading.Thread):
     def set_answering(self):
         self.serial.write_rgb(100, 0, 0)
 
-    # ---------------- UI SOUND ---------------- #
     def play_ui_sound(self, filename: str):
         if not os.path.exists(filename):
             return
@@ -70,7 +68,6 @@ class VoiceAssistant(threading.Thread):
         except Exception as e:
             log.warning("UI sound error: %s", e)
 
-    # ---------------- WAKE WORD ---------------- #
     def detect_wake_word(self) -> bool:
         chunk_size = self.porcupine.frame_length * self.resample_factor
         stream = self.pa.open(
@@ -146,7 +143,6 @@ class VoiceAssistant(threading.Thread):
             audio *= 0.9 / peak
         return audio, sample_rate
 
-    # ---------------- AI PROCESSING ---------------- #
     def process_with_ai(self, wav_path: str):
         self.set_processing()
         log.info("Processing audio via AI...")
@@ -212,7 +208,6 @@ class VoiceAssistant(threading.Thread):
             log.warning("AI processing error: %s", e)
             self.set_idle()
 
-    # ---------------- MAIN LOOP ---------------- #
     def run(self):
         while self.running:
             if self.detect_wake_word():
