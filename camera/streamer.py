@@ -10,7 +10,7 @@ CAMERA_URL = "http://206.167.46.66:3000/camera/frame"  # your Elysia backend
 CAMERA_INDEX = 0
 CAMERA_WIDTH = 640
 CAMERA_HEIGHT = 480
-CAMERA_FPS = 10
+CAMERA_FPS = 30
 RETRY_DELAY = 2  # seconds before retrying
 
 class CameraStreamer(threading.Thread):
