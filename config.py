@@ -23,8 +23,12 @@ CAMERA_FPS = int(os.getenv("CAMERA_FPS", 10))
 METRICS_PORT = int(os.getenv("METRICS_PORT", 8000))
 
 # Wake word (openWakeWord)
-# Either the name of a bundled model ("hey_jarvis", "alexa", "hey_mycroft", ...)
-# or a filesystem path to a custom-trained .onnx/.tflite model.
-WAKE_WORD_MODEL = os.getenv("WAKE_WORD_MODEL", "hey_jarvis")
+# Comma-separated list of bundled model names ("hey_jarvis", "alexa", "hey_mycroft", ...)
+# and/or filesystem paths to custom-trained .onnx/.tflite models. Any one of them
+# triggering above WAKE_WORD_THRESHOLD wakes the assistant.
+WAKE_WORD_MODELS = [
+    m.strip() for m in os.getenv("WAKE_WORD_MODELS", "hey_jarvis,ok_bring.onnx").split(",")
+    if m.strip()
+]
 WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", 0.5))
 

@@ -6,6 +6,7 @@ import random
 import threading
 import time
 from collections import deque
+from typing import List
 
 import numpy as np
 import openwakeword
@@ -20,7 +21,10 @@ from dotenv import load_dotenv
 # openWakeWord expects 80ms (1280 samples) of mono 16kHz int16 audio per frame
 WAKE_WORD_CHUNK_SAMPLES = 1280
 WAKE_WORD_SAMPLE_RATE = 16000
-WAKE_WORD_MODEL = os.getenv("WAKE_WORD_MODEL", "hey_jarvis")
+WAKE_WORD_MODELS = [
+    m.strip() for m in os.getenv("WAKE_WORD_MODELS", "hey_jarvis,ok_bring.onnx").split(",")
+    if m.strip()
+]
 WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", 0.5))
 
 
@@ -84,12 +88,12 @@ class SerialBridge:
 # ---------------- VOICE ASSISTANT ---------------- #
 
 class VoiceAssistant:
-    def __init__(self, serial_bridge: SerialBridge, wake_word_model: str = WAKE_WORD_MODEL, wake_word_threshold: float = WAKE_WORD_THRESHOLD):
+    def __init__(self, serial_bridge: SerialBridge, wake_word_models: List[str] = WAKE_WORD_MODELS, wake_word_threshold: float = WAKE_WORD_THRESHOLD):
         self.serial = serial_bridge
         self.serial.connect()
 
-        model_path = _resolve_wake_word_model_path(wake_word_model)
-        self.oww_model = WakeWordModel(wakeword_models=[model_path], inference_framework="onnx")
+        model_paths = [_resolve_wake_word_model_path(m) for m in wake_word_models]
+        self.oww_model = WakeWordModel(wakeword_models=model_paths, inference_framework="onnx")
         self.wake_word_threshold = wake_word_threshold
 
         self.pa = pyaudio.PyAudio()

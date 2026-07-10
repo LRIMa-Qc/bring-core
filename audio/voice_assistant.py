@@ -4,6 +4,7 @@ import base64
 import random
 import threading
 from collections import deque
+from typing import List
 import logging
 
 import numpy as np
@@ -47,23 +48,23 @@ class VoiceAssistant(threading.Thread):
     def __init__(
         self,
         serial_bridge: SerialBridge,
-        wake_word_model: str = "hey_jarvis",
+        wake_word_models: List[str] = ("hey_jarvis",),
         wake_word_threshold: float = 0.5,
     ):
         super().__init__(daemon=True)
         self.serial = serial_bridge
         self.serial.connect()
 
-        model_path = _resolve_wake_word_model_path(wake_word_model)
-        self.oww_model = WakeWordModel(wakeword_models=[model_path], inference_framework="onnx")
+        model_paths = [_resolve_wake_word_model_path(m) for m in wake_word_models]
+        self.oww_model = WakeWordModel(wakeword_models=model_paths, inference_framework="onnx")
         self.wake_word_threshold = wake_word_threshold
 
         self.pa = pyaudio.PyAudio()
         self.hardware_rate = 48000
         self.resample_factor = self.hardware_rate // WAKE_WORD_SAMPLE_RATE
 
-        log.info("VoiceAssistant ready | wake word: %s | HW: %dHz | Resample: 1/%d",
-                 wake_word_model, self.hardware_rate, self.resample_factor)
+        log.info("VoiceAssistant ready | wake words: %s | HW: %dHz | Resample: 1/%d",
+                 ", ".join(wake_word_models), self.hardware_rate, self.resample_factor)
 
         self.set_idle()
         self.running = True

@@ -2,7 +2,7 @@ import time
 import logging
 from typing import Set
 
-from config import BAUDRATE, METRICS_PORT, WAKE_WORD_MODEL, WAKE_WORD_THRESHOLD
+from config import BAUDRATE, METRICS_PORT, WAKE_WORD_MODELS, WAKE_WORD_THRESHOLD
 from audio.voice_assistant import VoiceAssistant
 from logging_setup import setup_logging
 from hardware_serial.bridge import SerialBridge
@@ -24,7 +24,7 @@ def main():
 
     voice_assistant = VoiceAssistant(
         serial_bridge,
-        wake_word_model=WAKE_WORD_MODEL,
+        wake_word_models=WAKE_WORD_MODELS,
         wake_word_threshold=WAKE_WORD_THRESHOLD,
     )
     voice_assistant.start()
