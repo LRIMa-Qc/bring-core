@@ -7,7 +7,8 @@ from collections import deque
 import logging
 
 import numpy as np
-import pvporcupine
+import openwakeword
+from openwakeword.model import Model as WakeWordModel
 import pyaudio
 import sounddevice as sd
 import soundfile as sf
@@ -18,30 +19,47 @@ from hardware_serial.bridge import SerialBridge
 log = logging.getLogger("voice_assistant")
 audio_lock = threading.Lock()
 
+# openWakeWord expects 80ms (1280 samples) of mono 16kHz int16 audio per frame
+WAKE_WORD_CHUNK_SAMPLES = 1280
+WAKE_WORD_SAMPLE_RATE = 16000
+
+
+def _resolve_wake_word_model_path(name_or_path: str) -> str:
+    """Resolve a bundled openWakeWord model name or a path to a custom-trained model."""
+    if os.path.exists(name_or_path):
+        return name_or_path
+    if name_or_path in openwakeword.models:
+        return openwakeword.models[name_or_path]["model_path"]
+    raise FileNotFoundError(
+        f"Unknown wake word model '{name_or_path}'. Pass a path to a "
+        f"custom-trained .onnx/.tflite model, or one of the bundled models: "
+        f"{', '.join(openwakeword.models)}"
+    )
+
+
 class VoiceAssistant(threading.Thread):
     """Voice Assistant system running in its own thread"""
 
-    def __init__(self, access_key: str, serial_bridge: SerialBridge):
+    def __init__(
+        self,
+        serial_bridge: SerialBridge,
+        wake_word_model: str = "hey_jarvis",
+        wake_word_threshold: float = 0.5,
+    ):
         super().__init__(daemon=True)
         self.serial = serial_bridge
         self.serial.connect()
 
-        keyword_path = os.path.abspath("bring.ppn")
-        if not os.path.exists(keyword_path):
-            raise FileNotFoundError(f"Missing PPN file: {keyword_path}")
-
-        self.porcupine = pvporcupine.create(
-            access_key=access_key,
-            keyword_paths=[keyword_path],
-        )
+        model_path = _resolve_wake_word_model_path(wake_word_model)
+        self.oww_model = WakeWordModel(wakeword_model_paths=[model_path])
+        self.wake_word_threshold = wake_word_threshold
 
         self.pa = pyaudio.PyAudio()
-        self.porcupine_rate = self.porcupine.sample_rate
         self.hardware_rate = 48000
-        self.resample_factor = self.hardware_rate // self.porcupine_rate
+        self.resample_factor = self.hardware_rate // WAKE_WORD_SAMPLE_RATE
 
-        log.info("VoiceAssistant ready | HW: %dHz | Resample: 1/%d",
-                 self.hardware_rate, self.resample_factor)
+        log.info("VoiceAssistant ready | wake word: %s | HW: %dHz | Resample: 1/%d",
+                 wake_word_model, self.hardware_rate, self.resample_factor)
 
         self.set_idle()
         self.running = True
@@ -69,7 +87,7 @@ class VoiceAssistant(threading.Thread):
             log.warning("UI sound error: %s", e)
 
     def detect_wake_word(self) -> bool:
-        chunk_size = self.porcupine.frame_length * self.resample_factor
+        chunk_size = WAKE_WORD_CHUNK_SAMPLES * self.resample_factor
         stream = self.pa.open(
             rate=self.hardware_rate,
             channels=1,
@@ -84,9 +102,11 @@ class VoiceAssistant(threading.Thread):
                 pcm = stream.read(chunk_size, exception_on_overflow=False)
                 pcm = np.frombuffer(pcm, dtype=np.int16)
                 pcm_16khz = pcm[::self.resample_factor]
-                if self.porcupine.process(pcm_16khz) >= 0:
+                predictions = self.oww_model.predict(pcm_16khz)
+                if any(score >= self.wake_word_threshold for score in predictions.values()):
                     stream.stop_stream()
                     stream.close()
+                    self.oww_model.reset()
                     return True
         except Exception:
             stream.stop_stream()
@@ -221,5 +241,4 @@ class VoiceAssistant(threading.Thread):
         self.running = False
         self.serial.close()
         self.pa.terminate()
-        self.porcupine.delete()
 

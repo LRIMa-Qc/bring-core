@@ -21,7 +21,10 @@ CAMERA_FPS = int(os.getenv("CAMERA_FPS", 10))
 
 # Metrics
 METRICS_PORT = int(os.getenv("METRICS_PORT", 8000))
-ACCESS_KEY = os.getenv("ACCESS_KEY")
-if not ACCESS_KEY:
-    raise ValueError("ACCESS_KEY missing in .env")
+
+# Wake word (openWakeWord)
+# Either the name of a bundled model ("hey_jarvis", "alexa", "hey_mycroft", ...)
+# or a filesystem path to a custom-trained .onnx/.tflite model.
+WAKE_WORD_MODEL = os.getenv("WAKE_WORD_MODEL", "hey_jarvis")
+WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", 0.5))
 

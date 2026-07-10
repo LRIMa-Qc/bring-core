@@ -8,13 +8,33 @@ import time
 from collections import deque
 
 import numpy as np
-import pvporcupine
+import openwakeword
+from openwakeword.model import Model as WakeWordModel
 import pyaudio
 import requests
 import sounddevice as sd
 import soundfile as sf
 import serial
 from dotenv import load_dotenv
+
+# openWakeWord expects 80ms (1280 samples) of mono 16kHz int16 audio per frame
+WAKE_WORD_CHUNK_SAMPLES = 1280
+WAKE_WORD_SAMPLE_RATE = 16000
+WAKE_WORD_MODEL = os.getenv("WAKE_WORD_MODEL", "hey_jarvis")
+WAKE_WORD_THRESHOLD = float(os.getenv("WAKE_WORD_THRESHOLD", 0.5))
+
+
+def _resolve_wake_word_model_path(name_or_path: str) -> str:
+    """Resolve a bundled openWakeWord model name or a path to a custom-trained model."""
+    if os.path.exists(name_or_path):
+        return name_or_path
+    if name_or_path in openwakeword.models:
+        return openwakeword.models[name_or_path]["model_path"]
+    raise FileNotFoundError(
+        f"Unknown wake word model '{name_or_path}'. Pass a path to a "
+        f"custom-trained .onnx/.tflite model, or one of the bundled models: "
+        f"{', '.join(openwakeword.models)}"
+    )
 
 
 BAUDRATE = 9600
@@ -60,23 +80,18 @@ class SerialBridge:
 # ---------------- VOICE ASSISTANT ---------------- #
 
 class VoiceAssistant:
-    def __init__(self, access_key: str, serial_bridge: SerialBridge):
+    def __init__(self, serial_bridge: SerialBridge, wake_word_model: str = WAKE_WORD_MODEL, wake_word_threshold: float = WAKE_WORD_THRESHOLD):
         self.serial = serial_bridge
         self.serial.connect()
 
-        keyword_path = os.path.abspath("bring.ppn")
-        if not os.path.exists(keyword_path):
-            raise FileNotFoundError(f"Missing PPN file: {keyword_path}")
+        model_path = _resolve_wake_word_model_path(wake_word_model)
+        self.oww_model = WakeWordModel(wakeword_model_paths=[model_path])
+        self.wake_word_threshold = wake_word_threshold
 
-        self.porcupine = pvporcupine.create(
-            access_key=access_key,
-            keyword_paths=[keyword_path],
-        )
         self.pa = pyaudio.PyAudio()
 
-        self.porcupine_rate = self.porcupine.sample_rate
         self.hardware_rate = 48000
-        self.resample_factor = self.hardware_rate // self.porcupine_rate
+        self.resample_factor = self.hardware_rate // WAKE_WORD_SAMPLE_RATE
 
         print("=" * 60)
         print("Voice Assistant Ready")
@@ -135,7 +150,7 @@ class VoiceAssistant:
     # ---------- WAKE WORD ---------- #
 
     def detect_wake_word(self):
-        chunk_size = self.porcupine.frame_length * self.resample_factor
+        chunk_size = WAKE_WORD_CHUNK_SAMPLES * self.resample_factor
         stream = self.pa.open(
             rate=self.hardware_rate,
             channels=1,
@@ -153,9 +168,11 @@ class VoiceAssistant:
                 pcm = np.frombuffer(pcm, dtype=np.int16)
                 pcm_16khz = pcm[::self.resample_factor]
 
-                if self.porcupine.process(pcm_16khz) >= 0:
+                predictions = self.oww_model.predict(pcm_16khz)
+                if any(score >= self.wake_word_threshold for score in predictions.values()):
                     stream.stop_stream()
                     stream.close()
+                    self.oww_model.reset()
                     return True
         except KeyboardInterrupt:
             stream.stop_stream()
@@ -290,17 +307,12 @@ class VoiceAssistant:
         finally:
             self.serial.close()
             self.pa.terminate()
-            self.porcupine.delete()
 
 
 # ---------------- ENTRYPOINT ---------------- #
 
 if __name__ == "__main__":
     load_dotenv()
-    ACCESS_KEY = os.getenv("ACCESS_KEY")
-    if not ACCESS_KEY:
-        print("ACCESS_KEY missing in .env")
-        exit(1)
 
     serial_bridge = SerialBridge(BAUDRATE)
-    VoiceAssistant(ACCESS_KEY, serial_bridge).run()
+    VoiceAssistant(serial_bridge).run()
