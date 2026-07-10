@@ -28,13 +28,17 @@ def _resolve_wake_word_model_path(name_or_path: str) -> str:
     """Resolve a bundled openWakeWord model name or a path to a custom-trained model."""
     if os.path.exists(name_or_path):
         return name_or_path
-    if name_or_path in openwakeword.models:
-        return openwakeword.models[name_or_path]["model_path"]
-    raise FileNotFoundError(
-        f"Unknown wake word model '{name_or_path}'. Pass a path to a "
-        f"custom-trained .onnx/.tflite model, or one of the bundled models: "
-        f"{', '.join(openwakeword.models)}"
-    )
+    if name_or_path not in openwakeword.MODELS:
+        raise FileNotFoundError(
+            f"Unknown wake word model '{name_or_path}'. Pass a path to a "
+            f"custom-trained .onnx/.tflite model, or one of the bundled models: "
+            f"{', '.join(openwakeword.MODELS)}"
+        )
+    model_path = openwakeword.MODELS[name_or_path]["model_path"].replace(".tflite", ".onnx")
+    if not os.path.exists(model_path):
+        print(f"Downloading openWakeWord model '{name_or_path}'...")
+        openwakeword.utils.download_models([name_or_path])
+    return model_path
 
 
 BAUDRATE = 9600
@@ -85,7 +89,7 @@ class VoiceAssistant:
         self.serial.connect()
 
         model_path = _resolve_wake_word_model_path(wake_word_model)
-        self.oww_model = WakeWordModel(wakeword_model_paths=[model_path])
+        self.oww_model = WakeWordModel(wakeword_models=[model_path], inference_framework="onnx")
         self.wake_word_threshold = wake_word_threshold
 
         self.pa = pyaudio.PyAudio()
